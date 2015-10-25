@@ -1,0 +1,140 @@
+---
+title: "Machine Learning Assignment"
+author: "Sara Rafi"
+date: "October 25, 2015"
+output: html_document
+---
+
+
+#Introduction
+The analysis attempts to predict how well an activity is performed using data collected by accelerometers on the belt, forearm, arm, and dumbell. The quality of an acivity is categorised in the following types:
+
+
+- Class A - Exactly according to specification. 
+- Class B - Throwing the Elbow to the front. 
+- Class C - Lifting the Dumbbell only halfway. 
+- Class D - Lowering the Dumbbell only halfway. 
+- Class E - Throwing the Hips to the front.
+
+
+
+#Datasets
+
+Two datasets are provided for this actitivity. One is the training set and the other is the testing dataset.
+
+
+```{r}
+##Training data
+
+trainUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+
+
+```{r}
+##Testing data
+
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+
+```{r}
+dim(training)
+
+```
+
+##Cleaning data
+
+***keeping variables of Interest***
+
+
+```{r}
+sensorColumns2 = grep(pattern =  "_belt|_arm|_dumbbell|_forearm", names(training))
+
+training<-training[,c(sensorColumns2,160)]
+```
+
+***Removing vairbales with missing values***
+
+```{r}
+missingData = is.na(training)
+
+omitColumns3 = which(colSums(missingData) >= 1)
+
+training = training[, -omitColumns3]
+
+dim(training)
+
+table(complete.cases(training))
+```
+
+
+##Splitting Data
+
+The training data is divided into two sub data: ***suntrain*** and ***subtest***. The ***subtrain*** dataframe is used to build predictors while the ***subtest*** data is used for cross validation.
+
+```{r}
+library(caret)
+
+set.seed(112)
+
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+
+subtrain<-training[inTrain,]
+subtest<-training[-inTrain, ]
+```
+
+
+
+##Predictors
+ 
+
+```{r}
+#install.packages("randomForest")
+
+library(randomForest)
+
+modFit<-randomForest(classe~., data=subtrain)
+
+modFit
+```
+The OOB gives an estimate of 42 percent out of sample error.
+
+##Sub-Testing sample
+
+
+The ***subtrain*** dataset is used for cross validation.
+
+```{r}
+predictionTesting = predict(modFit, newdata = subtest)
+
+confusionMatrix(predictionTesting, subtest$classe)
+```
+
+##Generating Submission Files
+
+
+```{r}
+predictionsB2 <- predict(modFit, newdata=testing)
+
+
+setwd("C://Users//Sara//Desktop//ML_Assignment//answers")
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predictionsB2)
+
+```
+
+
+
+
+
